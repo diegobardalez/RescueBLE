@@ -6,7 +6,9 @@
 
 ## Demo
 
-https://github.com/diegobardalez/RescueBLE/releases/download/v1.0.0/demo.mp4
+https://github.com/diegobardalez/RescueBLE/raw/master/assets/demo.mp4
+
+> 📥 [Descargar APK v1.0.0](https://github.com/diegobardalez/RescueBLE/releases/download/v1.0.0/RescueBLE-v1.0.0.apk)
 
 ---
 
