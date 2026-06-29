@@ -1,120 +1,103 @@
-# Rescue BLE — App de detección por Bluetooth para rescate sísmico
+# RescueBLE
 
-App React Native que permite a rescatistas localizar personas atrapadas bajo escombros
-usando señales Bluetooth Low Energy (BLE). Sin internet. Sin torres celulares.
+**Author / Autor:** Diego Bardalez Plaza
 
-## Cómo funciona
+App Android de rescate en desastres que usa Bluetooth Low Energy para localizar personas atrapadas bajo escombros — sin internet, sin GPS, sin torres celulares.
 
-- **Modo Víctima**: el teléfono emite una señal BLE continua identificada como `SOS-{ID}`.
-- **Modo Rescatista**: el teléfono escanea BLE en tiempo real y emite un beep cuya
-  frecuencia y velocidad aumentan al acercarse a la víctima (como un detector de metales).
-- El RSSI se filtra con un **filtro de Kalman** para suavizar lecturas inestables.
-- El audio usa la **Web Audio API** para generar tonos sin archivos externos.
+---
 
-## Setup
+## Demo
 
-### 1. Requisitos
-- Node 18+
-- React Native 0.73+
-- Xcode 15+ (iOS)
-- Android Studio (API 31+ recomendado)
+https://github.com/diegobardalez/RescueBLE/raw/master/assets/demo.mp4
 
-### 2. Instalar dependencias
+---
 
-```bash
-npm install
+## Descargar / Download
 
-# iOS
-cd ios && pod install && cd ..
-```
+📥 **[RescueBLE-v1.0.0.apk](https://github.com/diegobardalez/RescueBLE/releases/download/v1.0.0/RescueBLE-v1.0.0.apk)**
 
-### 3. Dependencias clave a instalar
+> Requiere Android 5.0+ con Bluetooth activado.  
+> Ir a **Ajustes → Seguridad → Instalar apps de fuentes desconocidas** antes de abrir el APK.
 
-```bash
-# BLE scanning (ya incluido en package.json)
-npm install react-native-ble-plx
+---
 
-# BLE advertising (modo víctima) — instalar por separado
-npm install react-native-ble-advertiser
+## ¿Qué es RescueBLE? / What is RescueBLE?
 
-# Navegación
-npm install @react-navigation/native @react-navigation/native-stack
-npm install react-native-screens react-native-safe-area-context
+Nacida la noche de los terremotos de Venezuela del 24 de junio de 2026 (magnitud 7.2 y 7.5), RescueBLE convierte cualquier teléfono Android en un dispositivo de rescate.
 
-# Mantener pantalla encendida en modo víctima
-npm install react-native-keep-awake
-```
+*Born the night of the Venezuela earthquakes of June 24, 2026 (magnitude 7.2 and 7.5), RescueBLE turns any Android phone into a rescue device.*
 
-### 4. Permisos
+---
 
-**Android**: Agregar contenido de `android/app/src/main/AndroidManifest_additions.xml`
-al `AndroidManifest.xml` existente.
+## Cómo funciona / How it works
 
-**iOS**: Agregar contenido de `ios_info_plist_additions.xml` al `Info.plist`.
+### 🆘 Modo Víctima / Victim Mode
+El teléfono emite una señal BLE continua al instante de abrir la pantalla. No requiere botón — funciona aunque la persona esté herida o desorientada. La señal atraviesa escombros hasta ~15-20 metros.
 
-### 5. Activar modo víctima (advertising)
+*The phone broadcasts a continuous BLE signal the moment the screen opens. No button press needed — works even if the person is injured. Signal penetrates rubble up to ~15-20 meters.*
 
-En `src/screens/VictimScreen.tsx`, hay un placeholder con comentarios detallados.
-Reemplazar con:
+### 🔍 Modo Rescatista / Rescuer Mode
+Escanea señales BLE cercanas y reproduce un beep cuya velocidad aumenta cuanto más cerca estás de la víctima — como un detector de metales, pero para personas.
 
-```typescript
-import BLEAdvertiser from 'react-native-ble-advertiser';
+*Scans nearby BLE signals and plays a beep that speeds up the closer you get to the victim — like a metal detector, but for people.*
 
-// Al arrancar:
-BLEAdvertiser.setCompanyId(0x004C);
-await BLEAdvertiser.broadcast(
-  RESCUE_SERVICE_UUID,
-  [{ key: 'localName', value: deviceName }],
-  {
-    advertiseMode: BLEAdvertiser.ADVERTISE_MODE_LOW_LATENCY,
-    txPowerLevel: BLEAdvertiser.ADVERTISE_TX_POWER_HIGH,
-    connectable: false,
-  }
-);
+---
 
-// Al detener:
-await BLEAdvertiser.stopBroadcast();
-```
+## Características / Features
 
-### 6. Correr
+- Señal BLE automática al entrar a Modo Víctima
+- Escaneo en tiempo real con estimación de distancia por RSSI
+- Filtro de Kalman para suavizar lecturas de señal inestables
+- Beep de proximidad con velocidad variable
+- Sin internet · Sin GPS · Sin infraestructura
+- Compatible con pantalla apagada
 
-```bash
-# Android
-npx react-native run-android
+---
 
-# iOS
-npx react-native run-ios
-```
+## Stack técnico / Tech Stack
 
-## Arquitectura
+- React Native 0.73 · TypeScript
+- react-native-ble-plx (escaneo BLE)
+- Módulo nativo Kotlin — BLE Advertising + MediaPlayer
+- Filtro de Kalman para RSSI
+- Android 5.0+ (API 21+)
+
+---
+
+## Arquitectura / Architecture
 
 ```
-src/
-  hooks/
-    useBLE.ts              ← BLE scan + filtro Kalman + estimación de distancia
-    useProximityAudio.ts   ← Beep que varía frecuencia/velocidad por distancia
-  screens/
-    HomeScreen.tsx         ← Selector de modo
-    RescuerScreen.tsx      ← Escáner con lista de víctimas + audio
-    VictimScreen.tsx       ← Advertising BLE modo SOS
-  utils/
-    constants.ts           ← UUID, colores, umbrales de distancia
+RescueBLEApp/
+  src/
+    hooks/
+      useBLE.ts              ← BLE scan + Kalman + distance estimation
+      useProximityAudio.ts   ← Proximity beep with variable speed
+    screens/
+      HomeScreen.tsx         ← Mode selector
+      RescuerScreen.tsx      ← BLE scanner + victim list + audio
+      VictimScreen.tsx       ← BLE advertising (SOS signal)
+    utils/
+      constants.ts           ← UUID, colors, distance thresholds
+  android/
+    app/src/main/
+      java/com/rescuebleapp/
+        BLEAdvertiserModule.kt   ← Native Kotlin: BLE + audio
+        BLEAdvertiserPackage.kt
+      assets/beep.mp3
 ```
 
-## Limitaciones conocidas
+---
 
-| Limitación | Mitigación |
-|---|---|
-| BLE inestable bajo concreto grueso | Kalman filter + promedio de N lecturas |
-| Rango ~5-15m bajo escombros (vs 30m en espacio libre) | Advertir al usuario del rango realista |
-| iOS advertising en background limitado | Usar KeepAwake en foreground como alternativa |
-| RSSI varía con orientación del dispositivo | Promediar y suavizar, no asumir distancia exacta |
-| Android < 12 requiere permiso de ubicación para BLE | Documentado en permisos |
+## Ideas para siguiente versión / Roadmap
 
-## Ideas para siguiente versión
-
-- [ ] Trilateration: 3 rescatistas reportan RSSI → servidor calcula posición 2D
-- [ ] Historial de última posición conocida en caso de pérdida de señal
-- [ ] Audio configurable (volumen, tipo de tono, vibración alternativa)
-- [ ] QR de onboarding para configurar grupos de rescate
+- [ ] Trilateración: 3 rescatistas reportan RSSI → calcular posición 2D
+- [ ] Historial de última señal conocida
+- [ ] Audio configurable (volumen, tipo de tono)
 - [ ] Modo mesh: rescatistas retransmiten señales de víctimas lejanas
+- [ ] iOS support
+
+---
+
+## License / Licencia
+
+MIT © Diego Bardalez Plaza
