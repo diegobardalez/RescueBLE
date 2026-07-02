@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
   StatusBar, AppState, Platform, Alert, Vibration,
   NativeModules, Animated,
 } from 'react-native';
@@ -72,6 +72,7 @@ export default function VictimScreen() {
   const [state, setState] = useState<AdvertisingState>('idle');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [deviceId] = useState(() => Math.floor(Math.random() * 9000 + 1000).toString());
+  const [ultrasonicOn, setUltrasonicOn] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef(AppState.currentState);
 
@@ -111,7 +112,18 @@ export default function VictimScreen() {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
   }, []);
 
-  useEffect(() => () => { stopAdvertising(); }, [stopAdvertising]);
+  const toggleUltrasonic = useCallback(async (val: boolean) => {
+    setUltrasonicOn(val);
+    try {
+      if (val) await BLEAdvertiser.startUltrasonic();
+      else await BLEAdvertiser.stopUltrasonic();
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => () => {
+    stopAdvertising();
+    BLEAdvertiser.stopUltrasonic?.().catch(() => {});
+  }, [stopAdvertising]);
 
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -126,7 +138,7 @@ export default function VictimScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#110D00" />
 
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
         {/* Animación central */}
         <View style={styles.centralWrap}>
@@ -153,6 +165,23 @@ export default function VictimScreen() {
           <StatBox icon="✳️" label="Estado" value={isActive ? 'Transmitiendo' : 'Inactivo'} color={isActive ? COLORS.warning : COLORS.textMuted} />
           <StatBox icon="🌙" label="Pantalla" value="Puede estar apagada" />
         </View>
+
+        {/* Tono K9 */}
+        <TouchableOpacity
+          style={[styles.k9Card, ultrasonicOn && styles.k9CardOn]}
+          onPress={() => toggleUltrasonic(!ultrasonicOn)}
+          activeOpacity={0.85}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.k9Title}>🐕 Señal para perros K9</Text>
+            <Text style={styles.k9Desc}>
+              {ultrasonicOn ? 'Emitiendo 18 kHz · 5s ON / 5s OFF' : 'Tono ultrasónico para brigadas caninas'}
+            </Text>
+          </View>
+          <View style={[styles.k9Badge, ultrasonicOn && styles.k9BadgeOn]}>
+            <Text style={styles.k9BadgeText}>{ultrasonicOn ? 'ON' : 'OFF'}</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* Info */}
         <View style={styles.infoCard}>
@@ -186,7 +215,7 @@ export default function VictimScreen() {
             ? '⚡ Para ahorrar batería, mantén el dispositivo quieto'
             : 'Al activar, el dispositivo emitirá una señal Bluetooth continua'}
         </Text>
-      </View>
+      </ScrollView>
 
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => { stopAdvertising(); nav.navigate('Home'); }}>
@@ -227,7 +256,7 @@ const statStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#110D00' },
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24, gap: 14 },
+  container: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 80, gap: 14 },
 
   centralWrap: { alignItems: 'center', paddingVertical: 12, gap: 14 },
   statusBadge: {
@@ -261,6 +290,21 @@ const styles = StyleSheet.create({
   btnText: { fontSize: 16, fontWeight: '800', color: COLORS.text, letterSpacing: 0.5 },
 
   hint: { fontSize: 12, color: COLORS.textDim, textAlign: 'center', lineHeight: 18 },
+
+  k9Card: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.surface, borderRadius: 14,
+    padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 12,
+  },
+  k9CardOn: { borderColor: '#3B82F680', backgroundColor: '#0F1A2D' },
+  k9Title: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
+  k9Desc: { fontSize: 11, color: COLORS.textMuted, lineHeight: 16 },
+  k9Badge: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: COLORS.border,
+  },
+  k9BadgeOn: { backgroundColor: COLORS.blue },
+  k9BadgeText: { fontSize: 12, fontWeight: '800', color: COLORS.text },
   bottomNav: {
     flexDirection: 'row', backgroundColor: COLORS.surface,
     borderTopWidth: 1, borderTopColor: COLORS.border,
