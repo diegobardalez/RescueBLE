@@ -1,3 +1,10 @@
+# Notas internas
+ROADMAP_v2.md
+
+# Keystores — never commit
+*.keystore
+*.jks
+
 # Node
 node_modules/
 npm-debug.log*
